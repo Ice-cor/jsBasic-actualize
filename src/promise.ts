@@ -6,10 +6,15 @@ class _Promise {
             throw new Error('必须接受一个函数')
         }
         const resolve = () => {
-            this.success()
+            setTimeout(()=>{
+                this.success(); // 异步，需要then之后才执行，否则success没有赋值
+            }, 0)
+            
         }
         const reject = () => {
-            this.fail()
+            setTimeout(()=>{
+                this.fail();
+            }, 0)
         }
         fn(resolve, reject);
     }

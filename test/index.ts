@@ -31,13 +31,14 @@ describe('Promise', () => {
             assert.isFunction(reject);
         })
     })
-    it('new Promise(success)中的 success 会被 resolve 调用的时候执行', () => {
+    it('new Promise(success)中的 success 会被 resolve 调用的时候执行', done => {
         const success = sinon.fake();
         const promise = new Promise((resolve, reject) => {
             assert.isFalse(success.called);
+            resolve();
             setTimeout(()=>{
-                resolve();
                 assert.isTrue(success.called)
+                done()
             })
         })
         promise.then(success);
