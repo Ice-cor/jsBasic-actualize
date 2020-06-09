@@ -43,5 +43,17 @@ describe('Promise', () => {
         })
         promise.then(success);
     })
+    it('new Promise(null, fail)中的 fail 会被 reject 调用的时候执行', done => {
+        const fail = sinon.fake();
+        const promise = new Promise((resolve, reject) => {
+            assert.isFalse(fail.called);
+            reject();
+            setTimeout(()=>{
+                assert.isTrue(fail.called)
+                done()
+            })
+        })
+        promise.then(null, fail);
+    })
 
 })
