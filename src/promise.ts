@@ -4,10 +4,15 @@ class _Promise {
             return;
         }
         this.state = 'fulfilled';
-        process.nextTick(() => { // 微任务 node环境
+        nextTick(() => { // 微任务 node环境
             this.callbacks.forEach(handle => {
                 if (typeof handle[0] === 'function') { // 判断必须放到定时器里面，否则会提前判断，拿到是null的值
-                    const x = handle[0].call(undefined, result); // 异步，需要then之后才执行，否则success没有赋值
+                    let x
+                    try {
+                        x = handle[0].call(undefined, result);
+                    } catch (e) {
+                        return handle[2].reject(e) // 2.2.7.2 如果抛出异常
+                    }
                     handle[2].resolveWith(x);
                 }
             })
@@ -18,14 +23,19 @@ class _Promise {
             return;
         }
         this.state = 'rejected';
-        process.nextTick(() => {
+        nextTick(() => {
             this.callbacks.forEach(handle => {
                 if (typeof handle[1] === 'function') {
-                    const x = handle[1].call(undefined, reason);
+                    let x;
+                    try {
+                        x = handle[1].call(undefined, reason);
+                    } catch (e) {
+                        handle[2].reject(e)
+                    }
                     handle[2].resolveWith(x)
                 }
             })
-        }, 0)
+        })
     }
     callbacks = []
     state = 'pending' // 'pending'|'fulfilled'|'rejected'三种状态，初始为'pending'
@@ -85,5 +95,22 @@ class _Promise {
         }
     }
 }
+function nextTick(fn) {
+    if (process !== undefined && typeof process.nextTick === "function") {
+        return process.nextTick(fn);
+    } else {
+        var counter = 1;
+        var observer = new MutationObserver(fn);
+        var textNode = document.createTextNode(String(counter));
+
+        observer.observe(textNode, {
+            characterData: true
+        });
+
+        counter = counter + 1;
+        textNode.data = String(counter);
+    }
+}
 
 export default _Promise;
+

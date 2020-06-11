@@ -177,7 +177,7 @@ describe('Promise', () => {
                 done();
             })
         })
-    it('2.2.7.1.2 x是一个Promise的实例，promise2传进去的函数会被resolve',
+    it('2.2.7.1 success的返回值x是一个Promise的实例',
         (done) => {
             const fn = sinon.fake()
             const promise1 = new Promise((resolve, reject) => {
@@ -188,6 +188,83 @@ describe('Promise', () => {
             setTimeout(() => {
                 assert(fn.called)
                 done()
-            }, 10)
+            }, 0)
+        })
+    it('2.2.7.1 success的返回值x是一个Promise的实例，且失败',
+        (done) => {
+            const fn = sinon.fake()
+            const promise1 = new Promise((resolve, reject) => {
+                resolve();
+            })
+            const promise2 = promise1.then(() => new Promise((undefined, reject) => { reject() })); // 返回一个promise实例
+            promise2.then(null, fn)
+            setTimeout(() => {
+                assert(fn.called)
+                done()
+            }, 0)
+        })
+    it('2.2.7.1 reject返回的x是一个Promise的实例',
+        (done) => {
+            const fn = sinon.fake()
+            const promise1 = new Promise((resolve, reject) => {
+                reject();
+            })
+            const promise2 = promise1.then(
+                null,
+                () => new Promise((resolve, reject) => resolve())); // 返回一个promise实例
+            promise2.then(fn)
+            setTimeout(() => {
+                assert(fn.called)
+                done()
+            }, 0)
+        })
+    it('2.2.7.1 reject返回的x是一个Promise的实例, 且失败',
+        (done) => {
+            const fn = sinon.fake()
+            const promise1 = new Promise((resolve, reject) => {
+                reject();
+            })
+            const promise2 = promise1.then(
+                null,
+                () => new Promise((resolve, reject) => reject())); // 返回一个promise实例
+            promise2.then(null, fn)
+            setTimeout(() => {
+                assert(fn.called)
+                done()
+            }, 0)
+        })
+    it('2.2.7.2 如果onFulfilled抛出异常, promise2 必须被拒绝（rejected）并把e当作原因',
+        (done) => {
+            const fn = sinon.fake()
+            const error = new Error('抛出异常')
+            const promise1 = new Promise((resolve, reject) => {
+                resolve();
+            })
+            const promise2 = promise1.then(() => {
+                throw error
+            })
+            promise2.then(null, fn)
+            setTimeout(() => {
+                assert(fn.called)
+                assert(fn.calledWith(error))
+                done()
+            }, 0)
+        })
+    it('2.2.7.2 如果onRejected抛出异常, promise2 必须被拒绝（rejected）并把e当作原因',
+        (done) => {
+            const fn = sinon.fake()
+            const error = new Error('抛出异常')
+            const promise1 = new Promise((resolve, reject) => {
+                reject();
+            })
+            const promise2 = promise1.then(null, () => {
+                throw error
+            })
+            promise2.then(null, fn)
+            setTimeout(() => {
+                assert(fn.called)
+                assert(fn.calledWith(error))
+                done()
+            }, 0)
         })
 })
