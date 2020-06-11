@@ -1,15 +1,15 @@
 class _Promise {
-    resolve(result) {
-        if (this.state === 'fulfilled') {
-            return;
-        }
-        this.state = 'fulfilled';
+    callbacks = []
+    state = 'pending' // 'pending'|'fulfilled'|'rejected'三种状态，初始为'pending'
+    private resolveOrReject(data, state, i) {
+        if (this.state !== 'pending') return;
+        this.state = state;
         nextTick(() => { // 微任务 node环境
             this.callbacks.forEach(handle => {
-                if (typeof handle[0] === 'function') { // 判断必须放到定时器里面，否则会提前判断，拿到是null的值
+                if (typeof handle[i] === 'function') { // 判断必须放到定时器里面，否则会提前判断，拿到是null的值
                     let x
                     try {
-                        x = handle[0].call(undefined, result);
+                        x = handle[i].call(undefined, data);
                     } catch (e) {
                         return handle[2].reject(e) // 2.2.7.2 如果抛出异常
                     }
@@ -18,27 +18,12 @@ class _Promise {
             })
         })
     }
-    reject(reason) {
-        if (this.state === 'rejected') {
-            return;
-        }
-        this.state = 'rejected';
-        nextTick(() => {
-            this.callbacks.forEach(handle => {
-                if (typeof handle[1] === 'function') {
-                    let x;
-                    try {
-                        x = handle[1].call(undefined, reason);
-                    } catch (e) {
-                        handle[2].reject(e)
-                    }
-                    handle[2].resolveWith(x)
-                }
-            })
-        })
+    resolve(result) {
+        this.resolveOrReject(result, 'fulfilled', 0);
     }
-    callbacks = []
-    state = 'pending' // 'pending'|'fulfilled'|'rejected'三种状态，初始为'pending'
+    reject(reason) {
+        this.resolveOrReject(reason, 'rejected', 1);
+    }
     constructor(fn) {
         if (typeof fn !== 'function') {
             throw new Error('必须接受一个函数')
@@ -59,39 +44,60 @@ class _Promise {
     }
     resolveWith(x) {
         if (this === x) { // 2.3.1
-            this.reject(new TypeError('不能是同一个引用对象'))
+            this.resolveWithSelf()
         }
         if (x instanceof _Promise) { // 2.3.2
-            x.then((result) => { // 2.3.3.3
-                this.resolve(result) // 2.3.3.3.1 
-            }, (reason) => {
-                this.reject(reason)  // 2.3.3.3.2 
-            })
+            this.resolveWithPromise(x)
         }
         if (x instanceof Object) { // 2.3.3
-            let then
-            try {
-                then = x.then // 2.3.3.1 让x作为x.then
-            } catch (e) {
-                this.reject(e) // 2.3.3.2
-            }
-            if (typeof then === 'function') { // 2.3.3.3, 如果为函数则调用then
-                try {
-                    x.then( // 
-                        (y) => {
-                            this.resolveWith(y) // 2.3.3.3.1
-                        }, (r) => {
-                            this.resolveWith(r) // 2.3.3.3.2
-                        })
-                } catch (e) { // 2.3.3.3.4 
-                    this.reject(e)
-                }
-            } else { // 2.3.3.4 如果不是函数，resolve
-                this.resolve(x)
-            }
+            this.resolveWithObject(x)
         } else { // 2.3.4 如果不是对象，直接resolve
             // 不考虑无限递归的情况
             this.resolve(x)
+        }
+    }
+    private resolveWithSelf() {
+        this.reject(new TypeError('不能是同一个引用对象'));
+    }
+    private resolveWithPromise(x) {
+        x.then(
+            result => {
+                this.resolve(result);
+            },
+            reason => {
+                this.reject(reason);
+            }
+        );
+    }
+    private getThen(x) {
+        let then;
+        try {
+            then = x.then;
+        } catch (e) {
+            return this.reject(e);
+        }
+        return then;
+    }
+    private resolveWithThenable(x) {
+        try {
+            x.then(
+                y => {
+                    this.resolveWith(y);
+                },
+                r => {
+                    this.reject(r);
+                }
+            );
+        } catch (e) {
+            this.reject(e);
+        }
+    }
+    private resolveWithObject(x) {
+        let then = this.getThen(x);
+        if (then instanceof Function) {
+            this.resolveWithThenable(x);
+        } else {
+            this.resolve(x);
         }
     }
 }
