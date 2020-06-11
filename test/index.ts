@@ -1,7 +1,7 @@
 import * as chai from 'chai';
 import * as sinon from 'sinon';
 import * as sinonChai from 'sinon-chai';
-import Promise from '../src/promise'
+import Promise from '../src/promise';
 
 const assert = chai.assert;
 
@@ -12,7 +12,7 @@ describe('Promise', () => {
     })
     it('new Promise() 必须接受一个函数', () => {
         assert.throw(() => { // 预测会报错
-            // @ts-ignoreß
+            // @ts-ignore
             new Promise();
         })
     })
@@ -148,11 +148,46 @@ describe('Promise', () => {
             promise.then(callbacks[0])
             promise.then(callbacks[1])
             promise.then(callbacks[2])
-            setTimeout(()=>{
+            setTimeout(() => {
                 assert(callbacks[0].called)
                 assert(callbacks[1].called)
                 assert(callbacks[2].called)
                 done()
             }, 0)
+        })
+    it('2.2.7 then必须返回一个promise',
+        (done) => {
+            const promise1 = new Promise((resolve, reject) => {
+                resolve();
+            })
+            const promise2 = promise1.then();
+            setTimeout(() => {
+                assert(promise2 instanceof Promise)
+                done()
+            }, 0)
+        })
+    it('2.2.7.1 如果onFulfilled或onRejected返回一个值x，运行 [[Resolve]](promise2, x)',
+        (done) => {
+            const promise1 = new Promise((resolve, reject) => {
+                resolve();
+            })
+            const promise2 = promise1.then(() => '成功');
+            promise2.then((result) => {
+                assert(result === '成功');
+                done();
+            })
+        })
+    it('2.2.7.1.2 x是一个Promise的实例，promise2传进去的函数会被resolve',
+        (done) => {
+            const fn = sinon.fake()
+            const promise1 = new Promise((resolve, reject) => {
+                resolve();
+            })
+            const promise2 = promise1.then(() => new Promise((resolve) => { resolve() })); // 返回一个promise实例
+            promise2.then(fn)
+            setTimeout(() => {
+                assert(fn.called)
+                done()
+            }, 10)
         })
 })
