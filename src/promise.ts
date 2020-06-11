@@ -4,21 +4,21 @@ class _Promise {
             return;
         }
         this.state = 'fulfilled';
-        setTimeout(() => {
+        process.nextTick(() => { // 微任务 node环境
             this.callbacks.forEach(handle => {
                 if (typeof handle[0] === 'function') { // 判断必须放到定时器里面，否则会提前判断，拿到是null的值
                     const x = handle[0].call(undefined, result); // 异步，需要then之后才执行，否则success没有赋值
                     handle[2].resolveWith(x);
                 }
             })
-        }, 0)
+        })
     }
     reject(reason) {
         if (this.state === 'rejected') {
             return;
         }
         this.state = 'rejected';
-        setTimeout(() => {
+        process.nextTick(() => {
             this.callbacks.forEach(handle => {
                 if (typeof handle[1] === 'function') {
                     const x = handle[1].call(undefined, reason);
